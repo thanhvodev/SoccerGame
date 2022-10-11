@@ -50,8 +50,6 @@ def vec_to_angle(vec):
 def angle_to_vec(angle):
     return Vector2(sin(angle), -cos(angle))
 
-def dist_key(pos):
-    return lambda p: (p.vpos - pos).length()
 
 def safe_normalise(vec):
     length = vec.length()
@@ -73,7 +71,7 @@ KICK_STRENGTH = 11.5
 DRAG = 0.98
 
 
-def ball_physics(pos, vel, bounds):
+def physics(pos, vel, bounds):
     pos += vel
 
     if pos < bounds[0] or pos > bounds[1]:
@@ -134,8 +132,8 @@ class Ball(MyActor):
             else:
                 bounds_y = PITCH_BOUNDS_Y
 
-            self.vpos.x, self.vel.x = ball_physics(self.vpos.x, self.vel.x, bounds_x)
-            self.vpos.y, self.vel.y = ball_physics(self.vpos.y, self.vel.y, bounds_y)
+            self.vpos.x, self.vel.x = physics(self.vpos.x, self.vel.x, bounds_x)
+            self.vpos.y, self.vel.y = physics(self.vpos.y, self.vel.y, bounds_y)
 
         for target in game.players:
             if (not self.owner or self.owner.team != target.team) and self.collide(target):
@@ -190,7 +188,6 @@ class Player(MyActor):
     def update(self):
         self.timer -= 1
         target = Vector2(0,0)
-        speed = PLAYER_SPEED
 
         my_team = game.teams[self.team]
         pre_kickoff = game.kickoff_player != None
@@ -238,9 +235,6 @@ class Team:
         self.active_control_player = None
         self.score = 0
 
-    def human(self):
-        return self.controls != None
-
 
 class Game:
     def __init__(self, p1_controls=None, p2_controls=None):
@@ -253,9 +247,8 @@ class Game:
     def reset(self):
         self.players = []
         
-        for pos in PLAYER_START_POS:
-            self.players.append(Player(LEVEL_W // 2, LEVEL_H // 2, 0))
-            self.players.append(Player(LEVEL_W // 2, LEVEL_H // 2, 1))
+        self.players.append(Player(LEVEL_W // 2, LEVEL_H // 2, 0))
+        self.players.append(Player(LEVEL_W // 2, LEVEL_H // 2, 1))
 
         self.goals = [Goal(i) for i in range(2)]
 
@@ -276,12 +269,11 @@ class Game:
 
             self.scoring_team = 0 if self.ball.vpos.y < HALF_LEVEL_H else 1
             self.teams[self.scoring_team].score += 1
+            self.reset()
 
         if self.ball.owner:
             o = self.ball.owner
             pos, team = o.vpos, o.team
-            owners_target_goal = game.goals[team]
-            other_team = 1 if team == 0 else 0
 
             self.kickoff_player = None
 
@@ -295,7 +287,6 @@ class Game:
     def draw(self):
         offset_x = max(0, min(LEVEL_W - WIDTH, self.camera_focus.x - WIDTH / 2))
         offset_y = max(0, min(LEVEL_H - HEIGHT, self.camera_focus.y - HEIGHT / 2))
-        offset = Vector2(offset_x, offset_y)
 
         screen.blit("pitch", (-offset_x, -offset_y)) #Scrolling
 
